@@ -1,5 +1,7 @@
 package mvc 
 {
+import adobe.utils.CustomActions;
+import mvc.support.NotificationCenter;
 /**
  * ...中介
  * @author Kanon
@@ -7,25 +9,28 @@ package mvc
 public class Mediator 
 {
 	protected var notificationList:Vector.<String>;
+	protected var facade:Facade;
 	public var mediatorName:String;
 	public function Mediator() 
 	{
-		
+		this.notificationList = new Vector.<String>();
+		this.facade = Facade.getInstance();
+		NotificationCenter.getInstance().addObserver(MVC_MSG, getNotificationHandler);
 	}
 	
 	protected function sendNotification(notificationName:String, body:Object):void
 	{
-		Facade.getInstance().sendNotification(notificationName, body);
+		this.facade.sendNotification(notificationName, body);
 	}
 	
 	protected function retrieveMediator(name:String):Mediator
 	{
-		return Facade.getInstance().retrieveMediator(name);
+		return this.facade.retrieveMediator(name);
 	}
 	
 	protected function retrieveProxy(name:String):Proxy
 	{
-		return Facade.getInstance().retrieveProxy(name);
+		return this.facade.retrieveProxy(name);
 	}
 	
 	/**
@@ -36,6 +41,29 @@ public class Mediator
 	{
 		var notificationList:Vector.<String> = new Vector.<String>();
 		return notificationList;
+	}
+	
+	/**
+	 * mvc消息回调
+	 * @param	notification	消息体
+	 */
+	protected function handleNotification(notification:Notification):void
+	{
+		//子类继承
+	}
+	
+	private function getNotificationHandler(notification:Notification):void 
+	{
+		var count = this.notificationList.length;
+		for (var i:int = 0; i < count; i++) 
+		{
+			var name:String = this.notificationList[i];
+			if (name == notification.notificationName)
+			{
+				handleNotification(notification);
+				break;
+			}
+		}
 	}
 }
 }

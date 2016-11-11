@@ -1,6 +1,7 @@
-var document=document || {};var window=window || (global.document=document,global);
+var window = window || global;
+var document = document || (window.document = {});
 /***********************************/
-/*http://www.layabox.com 2016/05/19*/
+/*http://www.layabox.com 2016/11/11*/
 /***********************************/
 var Laya=window.Laya=(function(window,document){
 	var Laya={
@@ -95,11 +96,8 @@ var Laya=window.Laya=(function(window,document){
 					if(fullName.indexOf('laya.')==0){
 						var paths=fullName.split('.');
 						miniName=miniName || paths[paths.length-1];
-						if(miniName!="Image")
-						{
-							if(Laya[miniName]) console.log("Warning!,this class["+miniName+"] already exist:",Laya[miniName]);
-							Laya[miniName]=o;
-						}
+						if(Laya[miniName]) console.log("Warning!,this class["+miniName+"] already exist:",Laya[miniName]);
+						Laya[miniName]=o;
 					}
 				}
 				else {
@@ -191,12 +189,12 @@ var Laya=window.Laya=(function(window,document){
 
 (function(window,document,Laya){
 	var __un=Laya.un,__uns=Laya.uns,__static=Laya.static,__class=Laya.class,__getset=Laya.getset,__newvec=Laya.__newvec;
-	Laya.interface('laya.runtime.IConchNode');
-	Laya.interface('laya.resource.IDispose');
-	Laya.interface('laya.runtime.ICPlatformClass');
-	Laya.interface('laya.filters.IFilterAction');
-	Laya.interface('laya.display.ILayout');
 	Laya.interface('laya.runtime.IMarket');
+	Laya.interface('laya.display.ILayout');
+	Laya.interface('laya.resource.IDispose');
+	Laya.interface('laya.runtime.IConchNode');
+	Laya.interface('laya.filters.IFilterAction');
+	Laya.interface('laya.runtime.ICPlatformClass');
 	/**
 	*@private
 	*/
@@ -383,10 +381,370 @@ var Laya=window.Laya=(function(window,document){
 	var LayaSample=(function(){
 		function LayaSample(){
 			Laya.init(1136,640);
+			new MvcTest();
+			new NotificationCenterTest();
+			NotificationCenter.getInstance().postNotification("test");
+			NotificationCenter.getInstance().postNotification("test2",123);
+			NotificationCenter.getInstance().postNotification("test3","aaa");
 		}
 
 		__class(LayaSample,'LayaSample');
 		return LayaSample;
+	})()
+
+
+	/**
+	*...用于初始化 view和proxy
+	*@author Kanon
+	*/
+	//class mvc.Command
+	var Command=(function(){
+		function Command(){
+			this.facade=null;
+			this.facade=Facade.getInstance();
+		}
+
+		__class(Command,'mvc.Command');
+		var __proto=Command.prototype;
+		//执行
+		__proto.execute=function(notification){}
+		return Command;
+	})()
+
+
+	/**
+	*...
+	*@author Kanon
+	*/
+	//class mvc.Facade
+	var Facade=(function(){
+		var Singletoner;
+		function Facade(singletoner){
+			this.mediatorDict=null;
+			this.proxyDict=null;
+			if (!singletoner)
+				throw new Error("只能用getInstance()来获取实例");
+			this.mediatorDict=new Dictionary();
+			this.proxyDict=new Dictionary();
+		}
+
+		__class(Facade,'mvc.Facade');
+		var __proto=Facade.prototype;
+		__proto.sendNotification=function(notificationName,body){
+			var notification=new Notification();
+			notification.notificationName=notificationName;
+			notification.body=body;
+			NotificationCenter.getInstance().postNotification("_mvc_message",notification);
+		}
+
+		/**
+		*注册mediator
+		*@param mediator
+		*/
+		__proto.registerMediator=function(mediator){
+			this.mediatorDict.set(mediator.mediatorName,mediator);
+		}
+
+		/**
+		*注册proxy
+		*@param proxy
+		*/
+		__proto.registerProxy=function(proxy){
+			this.proxyDict.set(proxy.proxyName,proxy);
+		}
+
+		/**
+		*获取proxy
+		*@param name
+		*@return
+		*/
+		__proto.retrieveProxy=function(name){
+			return this.proxyDict.get(name);
+		}
+
+		/**
+		*获取proxy
+		*@param name
+		*@return
+		*/
+		__proto.retrieveMediator=function(name){
+			return this.mediatorDict.get(name);
+		}
+
+		/**
+		*删除mediator
+		*@param name
+		*/
+		__proto.removeMediator=function(name){
+			this.mediatorDict.remove(name);
+		}
+
+		/**
+		*删除proxy
+		*@param name
+		*/
+		__proto.removeProxy=function(name){
+			this.proxyDict.remove(name);
+		}
+
+		/**
+		*初始化数据
+		*/
+		__proto.initData=function(){
+			var proxy;
+			for(var $each_proxy in this.proxyDict){
+				proxy=this.proxyDict[$each_proxy];
+				proxy.initData();
+			}
+		}
+
+		Facade.getInstance=function(){
+			if (!Facade.instance)Facade.instance=new Facade(new Singletoner());
+			return Facade.instance;
+		}
+
+		Facade.MVC_MSG="_mvc_message";
+		Facade.instance=null
+		Facade.__init$=function(){
+			//class Singletoner
+			Singletoner=(function(){
+				function Singletoner(){};
+				__class(Singletoner,'');
+				return Singletoner;
+			})()
+		}
+
+		return Facade;
+	})()
+
+
+	/**
+	*...中介
+	*@author Kanon
+	*/
+	//class mvc.Mediator
+	var Mediator=(function(){
+		function Mediator(){
+			this.notificationList=null;
+			this.facade=null;
+			this.mediatorName=null;
+			this.notificationList=[];
+			this.facade=Facade.getInstance();
+			NotificationCenter.getInstance().addObserver(/*no*/this.MVC_MSG,this.getNotificationHandler);
+		}
+
+		__class(Mediator,'mvc.Mediator');
+		var __proto=Mediator.prototype;
+		__proto.sendNotification=function(notificationName,body){
+			this.facade.sendNotification(notificationName,body);
+		}
+
+		__proto.retrieveMediator=function(name){
+			return this.facade.retrieveMediator(name);
+		}
+
+		__proto.retrieveProxy=function(name){
+			return this.facade.retrieveProxy(name);
+		}
+
+		/**
+		*列出感兴趣的事件列表 子类继承
+		*@return 事件列表
+		*/
+		__proto.listNotificationInterests=function(){
+			var notificationList=[];
+			return notificationList;
+		}
+
+		/**
+		*mvc消息回调
+		*@param notification 消息体
+		*/
+		__proto.handleNotification=function(notification){}
+		//子类继承
+		__proto.getNotificationHandler=function(notification){
+			var count=this.notificationList.length;
+			for (var i=0;i < count;i++){
+				var name=this.notificationList[i];
+				if (name==notification.notificationName){
+					this.handleNotification(notification);
+					break ;
+				}
+			}
+		}
+
+		return Mediator;
+	})()
+
+
+	/**
+	*...消息体
+	*@author Kanon
+	*/
+	//class mvc.Notification
+	var Notification=(function(){
+		function Notification(){
+			this.notificationName=null;
+			this.body=null;
+		}
+
+		__class(Notification,'mvc.Notification');
+		return Notification;
+	})()
+
+
+	/**
+	*...数据代理
+	*@author Kanon
+	*/
+	//class mvc.Proxy
+	var Proxy=(function(){
+		function Proxy(){
+			this.proxyName=null;
+		}
+
+		__class(Proxy,'mvc.Proxy');
+		var __proto=Proxy.prototype;
+		__proto.retrieveMediator=function(name){
+			return Facade.getInstance().retrieveMediator(name);
+		}
+
+		__proto.retrieveProxy=function(name){
+			return Facade.getInstance().retrieveProxy(name);
+		}
+
+		/**
+		*初始化数据 子类实现
+		*/
+		__proto.initData=function(){}
+		return Proxy;
+	})()
+
+
+	/**
+	*...消息中心
+	*@author Kanon
+	*/
+	//class mvc.support.NotificationCenter
+	var NotificationCenter=(function(){
+		var Singletoner;
+		function NotificationCenter(singletoner){
+			this.callBackDict=new Dictionary();
+			if (!singletoner)
+				throw new Error("只能用getInstance()来获取实例");
+		}
+
+		__class(NotificationCenter,'mvc.support.NotificationCenter');
+		var __proto=NotificationCenter.prototype;
+		/**
+		*添加观察者
+		*@param name 消息名称
+		*@param callBack 回调
+		*/
+		__proto.addObserver=function(name,callBack){
+			var callBackVect;
+			if (!this.callBackDict.get(name)){
+				callBackVect=[];
+				this.callBackDict.set(name,callBackVect);
+			}
+			else callBackVect=this.callBackDict.get(name);
+			callBackVect.push(callBack);
+		}
+
+		/**
+		*发送消息
+		*@param name 消息名称
+		*@param params 消息参数
+		*/
+		__proto.postNotification=function(name,params){
+			var callBackVect=this.callBackDict.get(name);
+			if (callBackVect){
+				var count=callBackVect.length;
+				for (var i=0;i < count;i++){
+					callBackVect[i](params);
+				}
+			}
+		}
+
+		/**
+		*删除消息
+		*@param name 消息名称
+		*/
+		__proto.removeObserver=function(name){
+			this.callBackDict.remove(name);
+		}
+
+		NotificationCenter.getInstance=function(){
+			if (!NotificationCenter.instance)NotificationCenter.instance=new NotificationCenter(new Singletoner())
+				return NotificationCenter.instance;
+		}
+
+		NotificationCenter.instance=null
+		NotificationCenter.__init$=function(){
+			//class Singletoner
+			Singletoner=(function(){
+				function Singletoner(){};
+				__class(Singletoner,'');
+				return Singletoner;
+			})()
+		}
+
+		return NotificationCenter;
+	})()
+
+
+	/**
+	*...mvc 测试
+	*@author Kanon
+	*/
+	//class sample.MvcTest
+	var MvcTest=(function(){
+		function MvcTest(){
+			var m=new ModelCommand();
+			var v=new ViewCommand();
+			var initDataCommand=new InitDataCommand();
+			m.execute(null);
+			v.execute(null);
+			initDataCommand.execute(null);
+		}
+
+		__class(MvcTest,'sample.MvcTest');
+		return MvcTest;
+	})()
+
+
+	/**
+	*... 消息中心测试
+	*@author Kanon
+	*/
+	//class sample.NotificationCenterTest
+	var NotificationCenterTest=(function(){
+		function NotificationCenterTest(){
+			NotificationCenter.getInstance().addObserver("test",this.callBackHandler);
+			NotificationCenter.getInstance().addObserver("test2",this.callBack2Handler);
+			NotificationCenter.getInstance().addObserver("test2",this.callBack4Handler);
+			NotificationCenter.getInstance().addObserver("test3",this.callBack3Handler);
+		}
+
+		__class(NotificationCenterTest,'sample.NotificationCenterTest');
+		var __proto=NotificationCenterTest.prototype;
+		__proto.callBack4Handler=function(){
+			console.log("callBack4Handler");
+		}
+
+		__proto.callBack3Handler=function(params){
+			console.log(params);
+		}
+
+		__proto.callBack2Handler=function(params){
+			console.log(params);
+		}
+
+		__proto.callBackHandler=function(){
+			console.log("callBackHandler");
+		}
+
+		return NotificationCenterTest;
 	})()
 
 
@@ -5848,6 +6206,96 @@ var Laya=window.Laya=(function(window,document){
 
 
 	/**
+	*<code>Dictionary</code> 是一个字典型的数据存取类。
+	*/
+	//class laya.utils.Dictionary
+	var Dictionary=(function(){
+		function Dictionary(){
+			this._values=[];
+			this._keys=[];
+		}
+
+		__class(Dictionary,'laya.utils.Dictionary');
+		var __proto=Dictionary.prototype;
+		/**
+		*给指定的键名设置值。
+		*@param key 键名。
+		*@param value 值。
+		*/
+		__proto.set=function(key,value){
+			var index=this.indexOf(key);
+			if (index >=0){
+				this._values[index]=value;
+				return;
+			}
+			this._keys.push(key);
+			this._values.push(value);
+		}
+
+		/**
+		*获取指定对象的键名索引。
+		*@param key 键名对象。
+		*@return 键名索引。
+		*/
+		__proto.indexOf=function(key){
+			var index=this._keys.indexOf(key);
+			if (index >=0)return index;
+			key=((typeof key=='string'))? Number(key):(((typeof key=='number'))? key.toString():key);
+			return this._keys.indexOf(key);
+		}
+
+		/**
+		*返回指定键名的值。
+		*@param key 键名对象。
+		*@return 指定键名的值。
+		*/
+		__proto.get=function(key){
+			var index=this.indexOf(key);
+			return index < 0 ? null :this._values[index];
+		}
+
+		/**
+		*移除指定键名的值。
+		*@param key 键名对象。
+		*@return 是否成功移除。
+		*/
+		__proto.remove=function(key){
+			var index=this.indexOf(key);
+			if (index >=0){
+				this._keys.splice(index,1);
+				this._values.splice(index,1);
+				return true;
+			}
+			return false;
+		}
+
+		/**
+		*清除此对象的键名列表和键值列表。
+		*/
+		__proto.clear=function(){
+			this._values.length=0;
+			this._keys.length=0;
+		}
+
+		/**
+		*获取所有的子元素列表。
+		*/
+		__getset(0,__proto,'values',function(){
+			return this._values;
+		});
+
+		/**
+		*获取所有的子元素键名列表。
+		*/
+		__getset(0,__proto,'keys',function(){
+			return this._keys;
+		});
+
+		return Dictionary;
+	})()
+
+
+	/**
 	*<code>Dragging</code> 类是触摸滑动控件。
 	*/
 	//class laya.utils.Dragging
@@ -7598,6 +8046,125 @@ var Laya=window.Laya=(function(window,document){
 
 		return WordText;
 	})()
+
+
+	/**
+	*...
+	*@author Kanon
+	*/
+	//class sample.controller.InitDataCommand extends mvc.Command
+	var InitDataCommand=(function(_super){
+		function InitDataCommand(){InitDataCommand.__super.call(this);;
+		};
+
+		__class(InitDataCommand,'sample.controller.InitDataCommand',_super);
+		var __proto=InitDataCommand.prototype;
+		__proto.execute=function(notification){
+			this.facade.initData();
+		}
+
+		return InitDataCommand;
+	})(Command)
+
+
+	/**
+	*...初始化数据代理
+	*@author Kanon
+	*/
+	//class sample.controller.ModelCommand extends mvc.Command
+	var ModelCommand=(function(_super){
+		function ModelCommand(){ModelCommand.__super.call(this);;
+		};
+
+		__class(ModelCommand,'sample.controller.ModelCommand',_super);
+		var __proto=ModelCommand.prototype;
+		__proto.execute=function(notification){
+			this.facade.registerProxy(new TestProxy());
+		}
+
+		return ModelCommand;
+	})(Command)
+
+
+	/**
+	*...
+	*@author Kanon
+	*/
+	//class sample.controller.ViewCommand extends mvc.Command
+	var ViewCommand=(function(_super){
+		function ViewCommand(){ViewCommand.__super.call(this);;
+		};
+
+		__class(ViewCommand,'sample.controller.ViewCommand',_super);
+		var __proto=ViewCommand.prototype;
+		__proto.execute=function(notification){
+			this.facade.registerMediator(new TestMediator());
+		}
+
+		return ViewCommand;
+	})(Command)
+
+
+	/**
+	*...
+	*@author Kanon
+	*/
+	//class sample.model.proxy.TestProxy extends mvc.Proxy
+	var TestProxy=(function(_super){
+		function TestProxy(){
+			this.count=0;
+			TestProxy.__super.call(this);
+			this.proxyName="testProxy";
+		}
+
+		__class(TestProxy,'sample.model.proxy.TestProxy',_super);
+		var __proto=TestProxy.prototype;
+		__proto.initData=function(){
+			this.count=100;
+		}
+
+		__proto.add=function(){
+			this.count++;
+		}
+
+		return TestProxy;
+	})(Proxy)
+
+
+	/**
+	*...
+	*@author Kanon
+	*/
+	//class sample.view.mediator.TestMediator extends mvc.Mediator
+	var TestMediator=(function(_super){
+		function TestMediator(){
+			TestMediator.__super.call(this);
+		}
+
+		__class(TestMediator,'sample.view.mediator.TestMediator',_super);
+		var __proto=TestMediator.prototype;
+		__proto.listNotificationInterests=function(){
+			var vect=[];
+			vect.push("testMsg1");
+			vect.push("testMsg2");
+			return vect;
+		}
+
+		__proto.handleNotification=function(notification){
+			switch (notification.notificationName){
+				case "testMsg1":
+					console.log("test1");
+					break ;
+				case "testMsg2":
+					console.log("test2");
+					break ;
+				default :
+					break ;
+				}
+		}
+
+		return TestMediator;
+	})(Mediator)
 
 
 	/**
@@ -13985,7 +14552,12 @@ var Laya=window.Laya=(function(window,document){
 	})(FileBitmap)
 
 
-	Laya.__init([EventDispatcher,Render,Browser,LoaderManager,LocalStorage,Timer]);
+	Laya.__init([EventDispatcher,Render,Browser,LoaderManager,LocalStorage,NotificationCenter,Timer,Facade]);
 	new LayaSample();
 
 })(window,document,Laya);
+
+
+/*
+1 file:///E:/workspace/kanon/html5Project/layabox/layaAir/layaAir_puremvc/src/mvc/Mediator.as (17):warning:MVC_MSG This variable is not defined.
+*/

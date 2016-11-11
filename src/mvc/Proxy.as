@@ -21,5 +21,13 @@ public class Proxy
 	{
 		return Facade.getInstance().retrieveProxy(name);
 	}
+	
+	/**
+	 * 初始化数据 子类实现
+	 */
+	public function initData():void
+	{
+		
+	}
 }
 }

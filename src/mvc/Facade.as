@@ -1,12 +1,15 @@
 package mvc
 {
+import laya.events.EventDispatcher;
 import laya.utils.Dictionary;
+import mvc.support.NotificationCenter;
 /**
  * ...
  * @author Kanon
  */
 public class Facade
 {
+	public static const MVC_MSG:String = "_mvc_message";
 	private var mediatorDict:Dictionary;
 	private var proxyDict:Dictionary;
 	private static var instance:Facade;
@@ -30,7 +33,7 @@ public class Facade
 		var notification:Notification = new Notification();
 		notification.notificationName = notificationName;
 		notification.body = body;
-		
+		NotificationCenter.getInstance().postNotification(MVC_MSG, notification);
 	}
 	
 	/**
@@ -87,6 +90,17 @@ public class Facade
 	public function removeProxy(name:String):void
 	{
 		this.proxyDict.remove(name);
+	}
+	
+	/**
+	 * 初始化数据
+	 */
+	public function initData():void
+	{
+		for each(var proxy:Proxy in this.proxyDict)
+		{
+			proxy.initData();
+		}
 	}
 }
 internal class Singletoner {  
