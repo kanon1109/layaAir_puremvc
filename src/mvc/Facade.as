@@ -97,9 +97,11 @@ public class Facade
 	 */
 	public function initData():void
 	{
-		for each(var proxy:Proxy in this.proxyDict)
+		var ary:Array = this.proxyDict.values;
+		var count:int = ary.length;
+		for (var i:int = 0; i < count; i++) 
 		{
-			proxy.initData();
+			ary[i].initData();
 		}
 	}
 }

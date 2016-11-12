@@ -381,11 +381,14 @@ var Laya=window.Laya=(function(window,document){
 	var LayaSample=(function(){
 		function LayaSample(){
 			Laya.init(1136,640);
-			new MvcTest();
 			new NotificationCenterTest();
 			NotificationCenter.getInstance().postNotification("test");
 			NotificationCenter.getInstance().postNotification("test2",123);
 			NotificationCenter.getInstance().postNotification("test3","aaa");
+			NotificationCenter.getInstance().postNotification("test4","bbb",333,555);
+			var o={"obj":12 };
+			NotificationCenter.getInstance().postNotification("test5",o);
+			new MvcTest();
 		}
 
 		__class(LayaSample,'LayaSample');
@@ -491,10 +494,10 @@ var Laya=window.Laya=(function(window,document){
 		*初始化数据
 		*/
 		__proto.initData=function(){
-			var proxy;
-			for(var $each_proxy in this.proxyDict){
-				proxy=this.proxyDict[$each_proxy];
-				proxy.initData();
+			var ary=this.proxyDict.values;
+			var count=ary.length;
+			for (var i=0;i < count;i++){
+				ary[i].initData();
 			}
 		}
 
@@ -528,9 +531,9 @@ var Laya=window.Laya=(function(window,document){
 			this.notificationList=null;
 			this.facade=null;
 			this.mediatorName=null;
-			this.notificationList=[];
+			this.notificationList=this.listNotificationInterests();
 			this.facade=Facade.getInstance();
-			NotificationCenter.getInstance().addObserver(/*no*/this.MVC_MSG,this.getNotificationHandler);
+			NotificationCenter.getInstance().addObserver("_mvc_message",this.getNotificationHandler,this);
 		}
 
 		__class(Mediator,'mvc.Mediator');
@@ -564,9 +567,10 @@ var Laya=window.Laya=(function(window,document){
 		//子类继承
 		__proto.getNotificationHandler=function(notification){
 			var count=this.notificationList.length;
+			var notificationName=notification.notificationName;
 			for (var i=0;i < count;i++){
 				var name=this.notificationList[i];
-				if (name==notification.notificationName){
+				if (name==notificationName){
 					this.handleNotification(notification);
 					break ;
 				}
@@ -630,6 +634,7 @@ var Laya=window.Laya=(function(window,document){
 		var Singletoner;
 		function NotificationCenter(singletoner){
 			this.callBackDict=new Dictionary();
+			this.thisObjDict=new Dictionary();
 			if (!singletoner)
 				throw new Error("只能用getInstance()来获取实例");
 		}
@@ -641,13 +646,20 @@ var Laya=window.Laya=(function(window,document){
 		*@param name 消息名称
 		*@param callBack 回调
 		*/
-		__proto.addObserver=function(name,callBack){
+		__proto.addObserver=function(name,callBack,thisObj){
 			var callBackVect;
+			var thisObjVect;
 			if (!this.callBackDict.get(name)){
 				callBackVect=[];
+				thisObjVect=[];
 				this.callBackDict.set(name,callBackVect);
+				this.thisObjDict.set(name,thisObjVect);
 			}
-			else callBackVect=this.callBackDict.get(name);
+			else{
+				callBackVect=this.callBackDict.get(name);
+				thisObjVect=this.thisObjDict.get(name);
+			}
+			thisObjVect.push(thisObj);
 			callBackVect.push(callBack);
 		}
 
@@ -656,22 +668,31 @@ var Laya=window.Laya=(function(window,document){
 		*@param name 消息名称
 		*@param params 消息参数
 		*/
-		__proto.postNotification=function(name,params){
+		__proto.postNotification=function(name,__rest){
+			var rest=[];for(var i=1,sz=arguments.length;i<sz;i++)rest.push(arguments[i]);
 			var callBackVect=this.callBackDict.get(name);
+			var thisObjVect=this.thisObjDict.get(name);
 			if (callBackVect){
 				var count=callBackVect.length;
 				for (var i=0;i < count;i++){
-					callBackVect[i](params);
+					callBackVect[i].apply(thisObjVect[i],rest);
 				}
 			}
 		}
 
 		/**
-		*删除消息
+		*删除消息侦查者
 		*@param name 消息名称
 		*/
 		__proto.removeObserver=function(name){
 			this.callBackDict.remove(name);
+		}
+
+		/**
+		*删除所有消息侦查者
+		*/
+		__proto.removeObservers=function(){
+			this.callBackDict.clear();
 		}
 
 		NotificationCenter.getInstance=function(){
@@ -706,6 +727,8 @@ var Laya=window.Laya=(function(window,document){
 			m.execute(null);
 			v.execute(null);
 			initDataCommand.execute(null);
+			Facade.getInstance().sendNotification("testMsg1");
+			Facade.getInstance().sendNotification("testMsg2",{"aaa":1,"bbb":"in MvcTest params" });
 		}
 
 		__class(MvcTest,'sample.MvcTest');
@@ -720,24 +743,37 @@ var Laya=window.Laya=(function(window,document){
 	//class sample.NotificationCenterTest
 	var NotificationCenterTest=(function(){
 		function NotificationCenterTest(){
-			NotificationCenter.getInstance().addObserver("test",this.callBackHandler);
-			NotificationCenter.getInstance().addObserver("test2",this.callBack2Handler);
-			NotificationCenter.getInstance().addObserver("test2",this.callBack4Handler);
-			NotificationCenter.getInstance().addObserver("test3",this.callBack3Handler);
+			NotificationCenter.getInstance().addObserver("test",this.callBackHandler,this);
+			NotificationCenter.getInstance().addObserver("test2",this.callBack2Handler,this);
+			NotificationCenter.getInstance().addObserver("test2",this.callBack4Handler,this);
+			NotificationCenter.getInstance().addObserver("test3",this.callBack3Handler,this);
+			NotificationCenter.getInstance().addObserver("test4",this.callBack5Handler,this);
+			NotificationCenter.getInstance().addObserver("test5",this.callBack6Handler,this);
 		}
 
 		__class(NotificationCenterTest,'sample.NotificationCenterTest');
 		var __proto=NotificationCenterTest.prototype;
+		__proto.callBack6Handler=function(obj){
+			console.log("obj",obj.obj);
+		}
+
+		__proto.callBack5Handler=function(str,a,b){
+			console.log(this);
+			console.log(str);
+			console.log(a);
+			console.log(b);
+		}
+
 		__proto.callBack4Handler=function(){
 			console.log("callBack4Handler");
 		}
 
 		__proto.callBack3Handler=function(params){
-			console.log(params);
+			console.log("callBack3Handler",params);
 		}
 
 		__proto.callBack2Handler=function(params){
-			console.log(params);
+			console.log("callBack2Handler",params);
 		}
 
 		__proto.callBackHandler=function(){
@@ -8099,6 +8135,7 @@ var Laya=window.Laya=(function(window,document){
 		var __proto=ViewCommand.prototype;
 		__proto.execute=function(notification){
 			this.facade.registerMediator(new TestMediator());
+			this.facade.registerMediator(new Test2Mediator());
 		}
 
 		return ViewCommand;
@@ -8114,7 +8151,7 @@ var Laya=window.Laya=(function(window,document){
 		function TestProxy(){
 			this.count=0;
 			TestProxy.__super.call(this);
-			this.proxyName="testProxy";
+			this.proxyName="TestProxy";
 		}
 
 		__class(TestProxy,'sample.model.proxy.TestProxy',_super);
@@ -8135,9 +8172,43 @@ var Laya=window.Laya=(function(window,document){
 	*...
 	*@author Kanon
 	*/
+	//class sample.view.mediator.Test2Mediator extends mvc.Mediator
+	var Test2Mediator=(function(_super){
+		function Test2Mediator(){
+			this.mediatorName="Test2Mediator";
+			Test2Mediator.__super.call(this);
+		}
+
+		__class(Test2Mediator,'sample.view.mediator.Test2Mediator',_super);
+		var __proto=Test2Mediator.prototype;
+		__proto.listNotificationInterests=function(){
+			var vect=[];
+			vect.push("testMsg2");
+			return vect;
+		}
+
+		__proto.handleNotification=function(notification){
+			switch (notification.notificationName){
+				case "testMsg2":
+					console.log("int Test2Mediator notificationName is "+notification.notificationName);
+					console.log("params is :",notification.body["aaa"],notification.body["bbb"]);
+					break ;
+				default :
+				}
+		}
+
+		return Test2Mediator;
+	})(Mediator)
+
+
+	/**
+	*...
+	*@author Kanon
+	*/
 	//class sample.view.mediator.TestMediator extends mvc.Mediator
 	var TestMediator=(function(_super){
 		function TestMediator(){
+			this.mediatorName="TestMediator";
 			TestMediator.__super.call(this);
 		}
 
@@ -8152,11 +8223,13 @@ var Laya=window.Laya=(function(window,document){
 
 		__proto.handleNotification=function(notification){
 			switch (notification.notificationName){
-				case "testMsg1":
-					console.log("test1");
+				case "testMsg1":;
+					var testProxy=this.retrieveProxy("TestProxy");
+					testProxy.add();
+					console.log("int TestMediator notificationName is "+notification.notificationName+" count is "+testProxy.count);
 					break ;
 				case "testMsg2":
-					console.log("test2");
+					console.log("int TestMediator notificationName is "+notification.notificationName);
 					break ;
 				default :
 					break ;
@@ -14552,12 +14625,7 @@ var Laya=window.Laya=(function(window,document){
 	})(FileBitmap)
 
 
-	Laya.__init([EventDispatcher,Render,Browser,LoaderManager,LocalStorage,NotificationCenter,Timer,Facade]);
+	Laya.__init([EventDispatcher,Render,Browser,LoaderManager,NotificationCenter,LocalStorage,Facade,Timer]);
 	new LayaSample();
 
 })(window,document,Laya);
-
-
-/*
-1 file:///E:/workspace/kanon/html5Project/layabox/layaAir/layaAir_puremvc/src/mvc/Mediator.as (17):warning:MVC_MSG This variable is not defined.
-*/

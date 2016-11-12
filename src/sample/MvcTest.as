@@ -1,6 +1,7 @@
 package sample 
 {
-	import sample.controller.InitDataCommand;
+import mvc.Facade;
+import sample.controller.InitDataCommand;
 import sample.controller.ModelCommand;
 import sample.controller.ViewCommand;
 /**
@@ -17,6 +18,9 @@ public class MvcTest
 		m.execute(null);
 		v.execute(null);
 		initDataCommand.execute(null);
+		
+		Facade.getInstance().sendNotification("testMsg1");
+		Facade.getInstance().sendNotification("testMsg2", { "aaa":1, "bbb":"in MvcTest params" } );
 	}
 	
 }

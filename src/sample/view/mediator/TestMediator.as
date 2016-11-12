@@ -2,15 +2,17 @@ package sample.view.mediator
 {
 import mvc.Mediator;
 import mvc.Notification;
+import mvc.Proxy;
+import sample.model.proxy.TestProxy;
 /**
  * ...
  * @author Kanon
  */
 public class TestMediator extends Mediator 
 {
-	
 	public function TestMediator() 
 	{
+		this.mediatorName = "TestMediator";
 		super();
 	}
 	
@@ -27,10 +29,12 @@ public class TestMediator extends Mediator
 		switch (notification.notificationName) 
 		{
 			case "testMsg1":
-				trace("test1");
+				var testProxy:TestProxy = this.retrieveProxy("TestProxy") as TestProxy;
+				testProxy.add();
+				trace("int TestMediator notificationName is " + notification.notificationName + " count is " + testProxy.count);
 				break;
 			case "testMsg2":
-				trace("test2");
+				trace("int TestMediator notificationName is " + notification.notificationName);
 				break;
 			default:
 				break;

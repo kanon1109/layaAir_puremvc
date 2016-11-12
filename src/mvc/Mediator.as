@@ -13,9 +13,9 @@ public class Mediator
 	public var mediatorName:String;
 	public function Mediator() 
 	{
-		this.notificationList = new Vector.<String>();
+		this.notificationList = this.listNotificationInterests();
 		this.facade = Facade.getInstance();
-		NotificationCenter.getInstance().addObserver(MVC_MSG, getNotificationHandler);
+		NotificationCenter.getInstance().addObserver(Facade.MVC_MSG, getNotificationHandler, this);
 	}
 	
 	protected function sendNotification(notificationName:String, body:Object):void
@@ -52,13 +52,15 @@ public class Mediator
 		//子类继承
 	}
 	
+	
 	private function getNotificationHandler(notification:Notification):void 
 	{
-		var count = this.notificationList.length;
+		var count:int = this.notificationList.length;
+		var notificationName:String = notification.notificationName;
 		for (var i:int = 0; i < count; i++) 
 		{
 			var name:String = this.notificationList[i];
-			if (name == notification.notificationName)
+			if (name == notificationName)
 			{
 				handleNotification(notification);
 				break;
