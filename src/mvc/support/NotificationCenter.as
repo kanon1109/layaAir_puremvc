@@ -8,7 +8,7 @@ import laya.utils.Dictionary;
 public class NotificationCenter 
 {
 	private var callBackDict:Dictionary = new Dictionary();
-	private var thisObjDict:Dictionary = new Dictionary();
+	private var callerDict:Dictionary = new Dictionary();
 	private static var instance:NotificationCenter;
 	public function NotificationCenter(singletoner:Singletoner) 
 	{
@@ -27,23 +27,23 @@ public class NotificationCenter
 	 * @param	name		消息名称
 	 * @param	callBack	回调
 	 */
-	public function addObserver(name:String, callBack:Function, thisObj:*):void
+	public function addObserver(name:String, callBack:Function, caller:*):void
 	{
 		var callBackVect:Vector.<Function>;
-		var thisObjVect:Array;
+		var callerVect:Array;
 		if (!this.callBackDict.get(name)) 
 		{
 			callBackVect = new Vector.<Function>();
-			thisObjVect = [];
+			callerVect = [];
 			this.callBackDict.set(name, callBackVect);
-			this.thisObjDict.set(name, thisObjVect);
+			this.callerDict.set(name, callerVect);
 		}
 		else 
 		{
 			callBackVect = this.callBackDict.get(name);
-			thisObjVect = this.thisObjDict.get(name);
+			callerVect = this.callerDict.get(name);
 		}
-		thisObjVect.push(thisObj);
+		callerVect.push(caller);
 		callBackVect.push(callBack);
 	}
 	
@@ -55,7 +55,7 @@ public class NotificationCenter
 	public function postNotification(name:String, ...rest):void
 	{
 		var callBackVect:Vector.<Function> = this.callBackDict.get(name);
-		var thisObjVect:Array = this.thisObjDict.get(name);
+		var thisObjVect:Array = this.callerDict.get(name);
 		if (callBackVect)
 		{
 			var count:uint = callBackVect.length;
