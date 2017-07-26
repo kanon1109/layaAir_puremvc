@@ -7,19 +7,25 @@ package mvc
 public class Proxy 
 {
 	public var proxyName:String;
+	protected var facade:Facade;
 	public function Proxy() 
 	{
-		
+		this.facade = Facade.getInstance();
 	}
 	
 	protected function retrieveMediator(name:String):Mediator
 	{
-		return Facade.getInstance().retrieveMediator(name);
+		return this.facade.retrieveMediator(name);
 	}
 	
 	protected function retrieveProxy(name:String):Proxy
 	{
-		return Facade.getInstance().retrieveProxy(name);
+		return this.facade.retrieveProxy(name);
+	}
+	
+	protected function sendNotification(notificationName:String, body:Object):void
+	{
+		this.facade.sendNotification(notificationName, body);
 	}
 	
 	/**
